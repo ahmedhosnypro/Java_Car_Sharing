@@ -2,6 +2,10 @@ package carsharing.domain;
 
 import carsharing.model.Company;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,8 +28,8 @@ public class DBCompanyDAO implements CompanyDAO {
     private static final String UPDATE_DATA = "UPDATE COMPANY SET name " + "= '%s' WHERE id = %d";
     private static final String DELETE_DATA = "DELETE FROM COMPANY WHERE id = %d";
 
-    public DBCompanyDAO(String url, String user, String password) {
-        dbClient = new DbClient(url, user, password);
+    public DBCompanyDAO(DbClient dbClient) {
+        this.dbClient = dbClient;
         setup();
     }
 
@@ -56,15 +60,42 @@ public class DBCompanyDAO implements CompanyDAO {
 
     @Override
     public Optional<Company> findById(int id) {
-        return dbClient.select(String.format(SELECT, id));
+        List<Company> items = selectForList(String.format(SELECT, id));
+        if (items.size() == 1) {
+            return Optional.ofNullable(items.get(0));
+        } else if (items.isEmpty()) {
+            return Optional.empty();
+        } else {
+            throw new IllegalStateException("Query returned more than one object");
+        }
     }
 
     @Override
     public List<Company> findAll() {
-        return dbClient.selectForList(FIND_ALL_COMPANIES);
+        return selectForList(FIND_ALL_COMPANIES);
     }
 
     public void setup() {
         dbClient.run(CREATE_TABLE_COMPANY);
+    }
+
+    List<Company> selectForList(String query) {
+        List<Company> companies = new ArrayList<>();
+
+        try (Connection con = dbClient.getConnection();
+             Statement statement = con.createStatement();
+             ResultSet resultSetItem = statement.executeQuery(query)
+        ) {
+            con.setAutoCommit(true);
+            while (resultSetItem.next()) {
+                int id = resultSetItem.getInt("id");
+                String name = resultSetItem.getString("name");
+                companies.add(new Company(id, name));
+            }
+            return companies;
+        } catch (Exception e) {
+            System.out.println("Error while executing statement: " + query + " " + e.getMessage());
+        }
+        return companies;
     }
 }

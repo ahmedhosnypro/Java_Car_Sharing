@@ -1,26 +1,26 @@
-package carsharing.command;
+package carsharing.menu;
 
 import carsharing.Main;
+import carsharing.command.CliCommand;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class Menu {
-    List<Command> commands;
+public abstract class Menu {
+    String header;
+    List<CliCommand> commands = new ArrayList<>();
     boolean hasBack;
     Menu backMenu;
 
-    public Menu(List<Command> commands, boolean hasBack) {
-        this.commands = commands;
+    Menu(String header, boolean hasBack, Menu backMenu) {
+        this.header = header;
         this.hasBack = hasBack;
-    }
-
-    public void setBackMenu(Menu backMenu) {
         this.backMenu = backMenu;
     }
 
     public void run() {
         while (true) {
-            System.out.println();
+            System.out.println("\n"+ header);
             for (int i = 0; i < commands.size(); i++) {
                 System.out.println((i + 1) + ". " + commands.get(i).getName());
             }
