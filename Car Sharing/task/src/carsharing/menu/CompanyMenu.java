@@ -4,7 +4,7 @@ import carsharing.command.CarList;
 import carsharing.command.CreateCar;
 import carsharing.model.Company;
 
-public class CompanyMenu extends Menu {
+public class CompanyMenu extends Menu<Company> {
 
     public CompanyMenu(Company company) {
         super("'" + company.getName() + "' company", true, ManagerMenu.getInstance());

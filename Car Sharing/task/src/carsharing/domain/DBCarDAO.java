@@ -16,6 +16,7 @@ public class DBCarDAO implements CarDAO {
             CREATE TABLE IF NOT EXISTS car (
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 name VARCHAR UNIQUE NOT NULL,
+                rented BOOLEAN DEFAULT FALSE,
                 company_id INT NOT NULL,
                 CONSTRAINT fk_company FOREIGN KEY (company_id)
                 REFERENCES COMPANY(id)
@@ -26,9 +27,8 @@ public class DBCarDAO implements CarDAO {
 
     // car
     private static final String SELECT = "SELECT * FROM car WHERE id = %d";
-    private static final String INSERT_DATA = "INSERT INTO car VALUES (%d , '%s', %d)";
-    private static final String UPDATE_DATA = "UPDATE car SET name = '%s', company_id = %d WHERE id = %d";
-    private static final String DELETE_DATA = "DELETE FROM car WHERE id = %d";
+    private static final String INSERT_DATA = "INSERT INTO car (id, name, company_id) VALUES (%d, '%s', %d)";
+    private static final String UPDATE_RENTED = "UPDATE car SET rented = %b WHERE id = %d";
 
     public DBCarDAO(DbClient dbClient) {
         this.dbClient = dbClient;
@@ -48,12 +48,8 @@ public class DBCarDAO implements CarDAO {
         dbClient.run(String.format(INSERT_DATA, car.getId(), car.getName(), car.getCompanyId()));
     }
 
-    public void delete(Car car) {
-        dbClient.run(String.format(DELETE_DATA, car.getId()));
-    }
-
-    public void update(Car car) {
-        dbClient.run(String.format(UPDATE_DATA, car.getName(), car.getCompanyId(), car.getId()));
+    public void updateRented(Car car) {
+        dbClient.run(String.format(UPDATE_RENTED, car.isRented(), car.getId()));
     }
 
     public Optional<Car> findById(int id) {
@@ -92,8 +88,9 @@ public class DBCarDAO implements CarDAO {
             while (resultSetItem.next()) {
                 int id = resultSetItem.getInt("id");
                 String name = resultSetItem.getString("name");
+                boolean rented = resultSetItem.getBoolean("rented");
                 int companyId = resultSetItem.getInt("company_id");
-                cars.add(new Car(id, name, companyId));
+                cars.add(new Car(id, name, companyId, rented));
             }
             return cars;
         } catch (Exception e) {

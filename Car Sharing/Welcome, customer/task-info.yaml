@@ -869,6 +869,798 @@ files:
         }
     }
   learner_created: false
+- name: src/carsharing/domain/DBManager.java
+  visible: true
+  text: |
+    package carsharing.domain;
+
+    public class DBManager {
+        private final CompanyDAO dbCompanyDAO;
+        private final CarDAO dbCarDAO;
+
+        public DBManager(String... args) {
+            DbClient dbClient = new DbClient(dataBaseName(args), "", "");
+            dbCompanyDAO = new DBCompanyDAO(dbClient);
+            dbCarDAO = new DBCarDAO(dbClient);
+        }
+
+        private static String dataBaseName(String... args) {
+            String fileName;
+            if (args.length >= 2 && args[0].equals("-databaseFileName")) {
+                fileName = args[1];
+            } else {
+                fileName = "carsharing";
+            }
+
+            return fileName;
+        }
+
+        public CompanyDAO getDbCompanyDAO() {
+            return dbCompanyDAO;
+        }
+
+        public CarDAO getDbCarDAO() {
+            return dbCarDAO;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/model/Car.java
+  visible: true
+  text: |-
+    package carsharing.model;
+
+    public class Car {
+        private int id;
+        private String name;
+        private final int companyId;
+
+        public Car(int id, String name, int companyId) {
+            this.id = id;
+            this.name = name;
+            this.companyId = companyId;
+        }
+
+        public Car(String name, int companyId) {
+            this.name = name;
+            this.companyId = companyId;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getCompanyId() {
+            return companyId;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return id + ". " + name;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/model/Company.java
+  visible: true
+  text: |
+    package carsharing.model;
+
+    public class Company {
+        private int id;
+        private String name;
+
+        public Company(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        public Company(String name) {
+            this.name = name;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public String toString() {
+            return id + ". " + name;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/command/CarList.java
+  visible: true
+  text: |
+    package carsharing.command;
+
+    import carsharing.Main;
+    import carsharing.model.Car;
+
+    import java.util.List;
+
+    public class CarList extends CliCommand {
+        private final int companyId;
+
+        public CarList(int companyId) {
+            name = "Car list";
+            this.companyId = companyId;
+        }
+
+        @Override
+        public void run() {
+            List<Car> cars = Main.DBManager.getDbCarDAO().findAllByCompanyId(companyId);
+            if (cars.isEmpty()) {
+                System.out.println("The car list is empty!");
+                return;
+            }
+            System.out.println("\nCar list:");
+            for (int i = 0; i < cars.size(); i++) {
+                System.out.println((i + 1) + ". " + cars.get(i).getName());
+            }
+        }
+    }
+  learner_created: true
+- name: src/carsharing/menu/Menu.java
+  visible: true
+  text: |
+    package carsharing.menu;
+
+    import carsharing.Main;
+    import carsharing.command.CliCommand;
+
+    import java.util.ArrayList;
+    import java.util.List;
+
+    public abstract class Menu {
+        String header;
+        List<CliCommand> commands = new ArrayList<>();
+        boolean hasBack;
+        Menu backMenu;
+
+        Menu(String header, boolean hasBack, Menu backMenu) {
+            this.header = header;
+            this.hasBack = hasBack;
+            this.backMenu = backMenu;
+        }
+
+        public void run() {
+            while (true) {
+                System.out.println("\n"+ header);
+                for (int i = 0; i < commands.size(); i++) {
+                    System.out.println((i + 1) + ". " + commands.get(i).getName());
+                }
+                if (hasBack) {
+                    System.out.println("0. Back");
+                } else {
+                    System.out.println("0. Exit");
+                }
+                int choice = Main.scanner.nextInt();
+                if (choice == 0 && hasBack) {
+                    backMenu.run();
+                    break;
+                } else if (choice == 0) {
+                    System.exit(0);
+                } else if (choice > 0 && choice <= commands.size()) {
+                    commands.get(choice - 1).run();
+                } else {
+                    System.out.println("Wrong input");
+                }
+            }
+        }
+    }
+  learner_created: true
+- name: src/carsharing/command/CliCommand.java
+  visible: true
+  text: |
+    package carsharing.command;
+
+    public abstract class CliCommand {
+        String name;
+
+        public abstract void run();
+
+        public String getName() {
+            return name;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/menu/ManagerMenu.java
+  visible: true
+  text: |
+    package carsharing.menu;
+
+    import carsharing.command.CreateCompany;
+    import carsharing.command.ChooseCompany;
+
+    public class ManagerMenu extends Menu {
+        private static ManagerMenu instance;
+
+        public ManagerMenu() {
+            super("", true, MainMenu.getInstance());
+            commands.add(ChooseCompany.getInstance());
+            commands.add(CreateCompany.getInstance());
+        }
+
+        public static ManagerMenu getInstance() {
+            if (instance == null) {
+                instance = new ManagerMenu();
+            }
+            return instance;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/menu/ChooseCompanyMenu.java
+  visible: true
+  text: |-
+    package carsharing.menu;
+
+    import carsharing.Main;
+    import carsharing.model.Company;
+
+    import java.util.List;
+
+    public class ChooseCompanyMenu extends Menu {
+        private final List<Company> companies;
+
+        public ChooseCompanyMenu(List<Company> companies) {
+            super("Choose the company:", true, ManagerMenu.getInstance());
+            this.companies = companies;
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                System.out.println("\n" + header);
+                for (var company : companies) {
+                    System.out.println(company.getId() + ". " + company.getName());
+                }
+                if (hasBack) {
+                    System.out.println("0. Back");
+                } else {
+                    System.out.println("0. Exit");
+                }
+                int choice = Main.scanner.nextInt();
+                if (choice == 0 && hasBack) {
+                    backMenu.run();
+                    break;
+                } else if (choice == 0) {
+                    System.exit(0);
+                } else if (choice > 0 && choice <= companies.size()) {
+                    new CompanyMenu(companies.get(choice - 1)).run();
+                    break;
+                } else {
+                    System.out.println("Wrong input");
+                }
+            }
+        }
+    }
+  learner_created: true
+- name: src/carsharing/domain/DBCarDAO.java
+  visible: true
+  text: |
+    package carsharing.domain;
+
+    import carsharing.model.Car;
+
+    import java.sql.Connection;
+    import java.sql.ResultSet;
+    import java.sql.Statement;
+    import java.util.ArrayList;
+    import java.util.List;
+    import java.util.Optional;
+
+    public class DBCarDAO implements CarDAO {
+        private final DbClient dbClient;
+
+        private static final String CREATE_TABLE_CAR = """
+                CREATE TABLE IF NOT EXISTS car (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    name VARCHAR UNIQUE NOT NULL,
+                    company_id INT NOT NULL,
+                    CONSTRAINT fk_company FOREIGN KEY (company_id)
+                    REFERENCES COMPANY(id)
+                );
+                """;
+
+        private static final String FIND_ALL_CARS = "SELECT * FROM car;";
+
+        // car
+        private static final String SELECT = "SELECT * FROM car WHERE id = %d";
+        private static final String INSERT_DATA = "INSERT INTO car VALUES (%d , '%s', %d)";
+        private static final String UPDATE_DATA = "UPDATE car SET name = '%s', company_id = %d WHERE id = %d";
+        private static final String DELETE_DATA = "DELETE FROM car WHERE id = %d";
+
+        public DBCarDAO(DbClient dbClient) {
+            this.dbClient = dbClient;
+            setup();
+        }
+
+        public void add(Car car) {
+            // determine if the company already exists
+            Optional<Car> carOptional = findById(car.getId());
+            if (carOptional.isPresent()) {
+                return;
+            }
+            // determine the next id
+            List<Car> cars = findAll();
+            int nextId = cars.stream().mapToInt(Car::getId).max().orElse(0) + 1;
+            car.setId(nextId);
+            dbClient.run(String.format(INSERT_DATA, car.getId(), car.getName(), car.getCompanyId()));
+        }
+
+        public void delete(Car car) {
+            dbClient.run(String.format(DELETE_DATA, car.getId()));
+        }
+
+        public void update(Car car) {
+            dbClient.run(String.format(UPDATE_DATA, car.getName(), car.getCompanyId(), car.getId()));
+        }
+
+        public Optional<Car> findById(int id) {
+            List<Car> items = selectForList(String.format(SELECT, id));
+            if (items.size() == 1) {
+                return Optional.ofNullable(items.get(0));
+            } else if (items.isEmpty()) {
+                return Optional.empty();
+            } else {
+                throw new IllegalStateException("Query returned more than one object");
+            }
+        }
+
+        @Override
+        public List<Car> findAll() {
+            return selectForList(FIND_ALL_CARS);
+        }
+
+        @Override
+        public List<Car> findAllByCompanyId(int id) {
+            return selectForList(String.format("SELECT * FROM car WHERE company_id = %d", id));
+        }
+
+        public void setup() {
+            dbClient.run(CREATE_TABLE_CAR);
+        }
+
+        private List<Car> selectForList(String query) {
+            List<Car> cars = new ArrayList<>();
+
+            try (Connection con = dbClient.getConnection();
+                 Statement statement = con.createStatement();
+                 ResultSet resultSetItem = statement.executeQuery(query)
+            ) {
+                con.setAutoCommit(true);
+                while (resultSetItem.next()) {
+                    int id = resultSetItem.getInt("id");
+                    String name = resultSetItem.getString("name");
+                    int companyId = resultSetItem.getInt("company_id");
+                    cars.add(new Car(id, name, companyId));
+                }
+                return cars;
+            } catch (Exception e) {
+                System.out.println("Error while executing statement: " + query + " " + e.getMessage());
+            }
+            return cars;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/command/LogAsManager.java
+  visible: true
+  text: |
+    package carsharing.command;
+
+    import carsharing.menu.ManagerMenu;
+
+    public class LogAsManager extends CliCommand {
+        private static LogAsManager instance;
+
+        private LogAsManager() {
+            name = "Log in as a manager";
+        }
+
+        public static CliCommand getInstance() {
+            if (instance == null) {
+                instance = new LogAsManager();
+            }
+            return instance;
+        }
+
+        @Override
+        public void run() {
+            ManagerMenu.getInstance().run();
+        }
+    }
+  learner_created: true
+- name: src/carsharing/menu/MainMenu.java
+  visible: true
+  text: |
+    package carsharing.menu;
+
+    import carsharing.command.LogAsManager;
+
+    public class MainMenu extends Menu {
+        private static MainMenu instance;
+
+        private MainMenu(String header, boolean hasBack, Menu backMenu) {
+            super(header, hasBack, backMenu);
+            commands.add(LogAsManager.getInstance());
+        }
+
+        public static MainMenu getInstance() {
+            if (instance == null) {
+                instance = new MainMenu("", false, null);
+            }
+            return instance;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/command/CreateCompany.java
+  visible: true
+  text: |
+    package carsharing.command;
+
+    import carsharing.Main;
+    import carsharing.model.Company;
+
+    import java.util.Scanner;
+
+    public class CreateCompany extends CliCommand {
+        private static CreateCompany instance;
+
+        private CreateCompany() {
+            name = "Create a company";
+        }
+
+        public static CliCommand getInstance() {
+            if (instance == null) {
+                instance = new CreateCompany();
+            }
+            return instance;
+        }
+
+        @Override
+        public void run() {
+            System.out.println("Enter the company name:");
+            Scanner scanner = new Scanner(System.in);
+            String companyName = scanner.nextLine();
+            Main.DBManager.getDbCompanyDAO().add(new Company(companyName));
+            System.out.println("The company was created!");
+        }
+    }
+  learner_created: true
+- name: src/carsharing/domain/CarDAO.java
+  visible: true
+  text: |
+    package carsharing.domain;
+
+    import carsharing.model.Car;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    public interface CarDAO {
+        void add(Car car);
+
+        void delete(Car car);
+
+        void update(Car car);
+
+        Optional<Car> findById(int id);
+
+        List<Car> findAll();
+
+        List<Car> findAllByCompanyId(int id);
+    }
+  learner_created: true
+- name: src/carsharing/menu/CompanyMenu.java
+  visible: true
+  text: |-
+    package carsharing.menu;
+
+    import carsharing.command.CarList;
+    import carsharing.command.CreateCar;
+    import carsharing.model.Company;
+
+    public class CompanyMenu extends Menu {
+
+        public CompanyMenu(Company company) {
+            super("'" + company.getName() + "' company", true, ManagerMenu.getInstance());
+            commands.add(new CarList(company.getId()));
+            commands.add(new CreateCar(company.getId()));
+        }
+    }
+  learner_created: true
+- name: src/carsharing/domain/DBCompanyDAO.java
+  visible: true
+  text: |
+    package carsharing.domain;
+
+    import carsharing.model.Company;
+
+    import java.sql.Connection;
+    import java.sql.ResultSet;
+    import java.sql.Statement;
+    import java.util.ArrayList;
+    import java.util.List;
+    import java.util.Optional;
+
+    public class DBCompanyDAO implements CompanyDAO {
+        private final DbClient dbClient;
+
+        private static final String CREATE_TABLE_COMPANY = """
+                CREATE TABLE IF NOT EXISTS COMPANY (
+                    ID INT PRIMARY KEY AUTO_INCREMENT,
+                    NAME VARCHAR(255) NOT NULL UNIQUE
+                );
+                """;
+
+        private static final String FIND_ALL_COMPANIES = """
+                SELECT * FROM COMPANY;
+                """;
+
+        private static final String SELECT = "SELECT * FROM COMPANY WHERE id = %d";
+        private static final String INSERT_DATA = "INSERT INTO COMPANY VALUES (%d , '%s')";
+        private static final String UPDATE_DATA = "UPDATE COMPANY SET name " + "= '%s' WHERE id = %d";
+        private static final String DELETE_DATA = "DELETE FROM COMPANY WHERE id = %d";
+
+        public DBCompanyDAO(DbClient dbClient) {
+            this.dbClient = dbClient;
+            setup();
+        }
+
+
+        @Override
+        public void add(Company company) {
+            // determine if the company already exists
+            Optional<Company> companyOptional = findById(company.getId());
+            if (companyOptional.isPresent()) {
+                return;
+            }
+            // determine the next id
+            List<Company> companies = findAll();
+            int nextId = companies.stream().mapToInt(Company::getId).max().orElse(0) + 1;
+            company.setId(nextId);
+            dbClient.run(String.format(INSERT_DATA, company.getId(), company.getName()));
+        }
+
+        @Override
+        public void delete(Company company) {
+            dbClient.run(String.format(DELETE_DATA, company.getId()));
+        }
+
+        @Override
+        public void update(Company company) {
+            dbClient.run(String.format(UPDATE_DATA, company.getName(), company.getId()));
+        }
+
+        @Override
+        public Optional<Company> findById(int id) {
+            List<Company> items = selectForList(String.format(SELECT, id));
+            if (items.size() == 1) {
+                return Optional.ofNullable(items.get(0));
+            } else if (items.isEmpty()) {
+                return Optional.empty();
+            } else {
+                throw new IllegalStateException("Query returned more than one object");
+            }
+        }
+
+        @Override
+        public List<Company> findAll() {
+            return selectForList(FIND_ALL_COMPANIES);
+        }
+
+        public void setup() {
+            dbClient.run(CREATE_TABLE_COMPANY);
+        }
+
+        List<Company> selectForList(String query) {
+            List<Company> companies = new ArrayList<>();
+
+            try (Connection con = dbClient.getConnection();
+                 Statement statement = con.createStatement();
+                 ResultSet resultSetItem = statement.executeQuery(query)
+            ) {
+                con.setAutoCommit(true);
+                while (resultSetItem.next()) {
+                    int id = resultSetItem.getInt("id");
+                    String name = resultSetItem.getString("name");
+                    companies.add(new Company(id, name));
+                }
+                return companies;
+            } catch (Exception e) {
+                System.out.println("Error while executing statement: " + query + " " + e.getMessage());
+            }
+            return companies;
+        }
+    }
+  learner_created: true
+- name: src/carsharing/domain/CompanyDAO.java
+  visible: true
+  text: |
+    package carsharing.domain;
+
+    import carsharing.model.Company;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    public interface CompanyDAO {
+        void add(Company company);
+
+        void delete(Company company);
+
+        void update(Company company);
+
+        Optional<Company> findById(int id);
+
+        List<Company> findAll();
+    }
+  learner_created: true
+- name: src/carsharing/command/CreateCar.java
+  visible: true
+  text: |
+    package carsharing.command;
+
+    import carsharing.Main;
+    import carsharing.model.Car;
+
+    import java.util.Scanner;
+
+    public class CreateCar extends CliCommand {
+        private final int companyId;
+
+        public CreateCar(int companyId) {
+            name = "Create a car";
+            this.companyId = companyId;
+        }
+
+        @Override
+        public void run() {
+            System.out.println("\nEnter the car name:");
+            Scanner scanner = new Scanner(System.in);
+            String carName = scanner.nextLine();
+            Main.DBManager.getDbCarDAO().add(new Car(carName, companyId));
+            System.out.println("The car was created!");
+        }
+    }
+  learner_created: true
+- name: src/carsharing/command/ChooseCompany.java
+  visible: true
+  text: |
+    package carsharing.command;
+
+    import carsharing.Main;
+    import carsharing.menu.ChooseCompanyMenu;
+    import carsharing.model.Company;
+
+    import java.util.List;
+
+    public class ChooseCompany extends CliCommand {
+        private static ChooseCompany instance;
+
+        private ChooseCompany() {
+            name = "Company list";
+        }
+
+        public static CliCommand getInstance() {
+            if (instance == null) {
+                instance = new ChooseCompany();
+            }
+            return instance;
+        }
+
+        @Override
+        public void run() {
+            List<Company> companies = Main.DBManager.getDbCompanyDAO().findAll();
+            if (companies.isEmpty()) {
+                System.out.println("The company list is empty!");
+                return;
+            }
+            ChooseCompanyMenu menu = new ChooseCompanyMenu(companies);
+            menu.run();
+        }
+    }
+  learner_created: true
+- name: src/carsharing/domain/DbClient.java
+  visible: true
+  text: |-
+    package carsharing.domain;
+
+    import java.sql.*;
+
+    public class DbClient {
+        private final String url;
+        private final String user;
+        private final String password;
+
+        protected static final String URL_PREFIX = "jdbc:h2:./src/carsharing/db/";
+
+        public DbClient(String url, String user, String password) {
+            this.url = URL_PREFIX + url;
+            this.user = user;
+            this.password = password;
+        }
+
+
+        public void run(String str) {
+            try (Connection con = getConnection(); // Statement creation
+                 Statement statement = con.createStatement()
+            ) {
+                con.setAutoCommit(true);
+                statement.executeUpdate(str); // Statement execution
+            } catch (SQLException e) {
+                System.out.println("Error while executing statement: " + str + " " + e.getMessage());
+            }
+        }
+
+        Connection getConnection() throws SQLException {
+            return DriverManager.getConnection(url, user, password);
+        }
+    }
+  learner_created: true
+- name: src/carsharing/model/Customer.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/command/LogAsCustomer.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/menu/ChooseCustomerMenu.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/domain/CustomerDAO.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/domain/DBCustomerDAO.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/command/CreateCustomer.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/db/carsharing.mv.db
+  visible: true
+  text: SDoyLGJsb2NrOjYsYmxvY2tTaXplOjEwMDAsY2h1bms6MzQsY2xlYW46MSxjcmVhdGVkOjE4OWY1YTc3ZmQ2LGZvcm1hdDoxLHZlcnNpb246MzQsZmxldGNoZXI6MTJhZWExNWUKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEg6MixibG9jazo2LGJsb2NrU2l6ZToxMDAwLGNodW5rOjM0LGNsZWFuOjEsY3JlYXRlZDoxODlmNWE3N2ZkNixmb3JtYXQ6MSx2ZXJzaW9uOjM0LGZsZXRjaGVyOjEyYWVhMTVlCgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjaHVuazozMCxibG9jazoyLGxlbjoxLG1hcDoxNyxtYXg6Y2MwLG5leHQ6MyxwYWdlczo0LHJvb3Q6YzAwMDAwMjQ3NTQsdGltZToxMzksdmVyc2lvbjozMCxwaW5Db3VudDowICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKAAAH2wdTAxAAMTIzNDU2NwUIBQkFCgULBQwFDQUOBQ8FEAARBCEgJlhTRVQgQ1JFQVRFX0JVSUxEIDIwMBEEIiAiDTJDUkVBVEUgVVNFUiBJRiBOT1QgRVhJU1RTICIiIFNBTFQgJycgSEFTSCAnJyBBRE1JThEEIyAgDZECQ1JFQVRFIENBQ0hFRCBUQUJMRSAiUFVCTElDIi4iQ09NUEFOWSIoCiAgICAiSUQiIElOVCBERUZBVUxUIE5FWFQgVkFMVUUgRk9SICJQVUJMSUMiLiJTWVNURU1fU0VRVUVOQ0VfOUMzOEZDREFfRjVGNF80QTA1X0I0OTRfNDZBM0Q1RTk3OTQ0IiBOT1QgTlVMTCBOVUxMX1RPX0RFRkFVTFQgU0VRVUVOQ0UgIlBVQkxJQyIuIlNZU1RFTV9TRVFVRU5DRV85QzM4RkNEQV9GNUY0XzRBMDVfQjQ5NF80NkEzRDVFOTc5NDQiLAogICAgIk5BTUUiIFZBUkNIQVIoMjU1KSBOT1QgTlVMTAopEQQkICMNbUNSRUFURSBTRVFVRU5DRSAiUFVCTElDIi4iU1lTVEVNX1NFUVVFTkNFXzlDMzhGQ0RBX0Y1RjRfNEEwNV9CNDk0XzQ2QTNENUU5Nzk0NCIgU1RBUlQgV0lUSCA0IEJFTE9OR1NfVE9fVEFCTEURBCUgIQ1HQ1JFQVRFIFBSSU1BUlkgS0VZICJQVUJMSUMiLiJQUklNQVJZX0tFWV82IiBPTiAiUFVCTElDIi4iQ09NUEFOWSIoIklEIikRBCYgJQ12QUxURVIgVEFCTEUgIlBVQkxJQyIuIkNPTVBBTlkiIEFERCBDT05TVFJBSU5UICJQVUJMSUMiLiJDT05TVFJBSU5UXzYiIFBSSU1BUlkgS0VZKCJJRCIpIElOREVYICJQVUJMSUMiLiJQUklNQVJZX0tFWV82IhEEJyAhDU9DUkVBVEUgVU5JUVVFIElOREVYICJQVUJMSUMiLiJDT05TVFJBSU5UX0lOREVYXzYiIE9OICJQVUJMSUMiLiJDT01QQU5ZIigiTkFNRSIpEQQoICUNeUFMVEVSIFRBQkxFICJQVUJMSUMiLiJDT01QQU5ZIiBBREQgQ09OU1RSQUlOVCAiUFVCTElDIi4iQ09OU1RSQUlOVF82MyIgVU5JUVVFKCJOQU1FIikgSU5ERVggIlBVQkxJQyIuIkNPTlNUUkFJTlRfSU5ERVhfNiIRBCkgIA2nAkNSRUFURSBDQUNIRUQgVEFCTEUgIlBVQkxJQyIuIkNBUiIoCiAgICAiSUQiIElOVCBERUZBVUxUIE5FWFQgVkFMVUUgRk9SICJQVUJMSUMiLiJTWVNURU1fU0VRVUVOQ0VfRjQ1M0M0NjJfMTA3Rl80OThGXzk0Q0VfNjQ4ODJFNkZCODgwIiBOT1QgTlVMTCBOVUxMX1RPX0RFRkFVTFQgU0VRVUVOQ0UgIlBVQkxJQyIuIlNZU1RFTV9TRVFVRU5DRV9GNDUzQzQ2Ml8xMDdGXzQ5OEZfOTRDRV82NDg4MkU2RkI4ODAiLAogICAgIk5BTUUiIFZBUkNIQVIgTk9UIE5VTEwsCiAgICAiQ09NUEFOWV9JRCIgSU5UIE5PVCBOVUxMCikRBCogIw1tQ1JFQVRFIFNFUVVFTkNFICJQVUJMSUMiLiJTWVNURU1fU0VRVUVOQ0VfRjQ1M0M0NjJfMTA3Rl80OThGXzk0Q0VfNjQ4ODJFNkZCODgwIiBTVEFSVCBXSVRIIDEgQkVMT05HU19UT19UQUJMRREEKyAhDUNDUkVBVEUgUFJJTUFSWSBLRVkgIlBVQkxJQyIuIlBSSU1BUllfS0VZXzEiIE9OICJQVUJMSUMiLiJDQVIiKCJJRCIpEQQsICUNckFMVEVSIFRBQkxFICJQVUJMSUMiLiJDQVIiIEFERCBDT05TVFJBSU5UICJQVUJMSUMiLiJDT05TVFJBSU5UXzEiIFBSSU1BUlkgS0VZKCJJRCIpIElOREVYICJQVUJMSUMiLiJQUklNQVJZX0tFWV8xIhEELSAhDUtDUkVBVEUgVU5JUVVFIElOREVYICJQVUJMSUMiLiJDT05TVFJBSU5UX0lOREVYXzEiIE9OICJQVUJMSUMiLiJDQVIiKCJOQU1FIikRBC4gJQ11QUxURVIgVEFCTEUgIlBVQkxJQyIuIkNBUiIgQUREIENPTlNUUkFJTlQgIlBVQkxJQyIuIkNPTlNUUkFJTlRfMTAiIFVOSVFVRSgiTkFNRSIpIElOREVYICJQVUJMSUMiLiJDT05TVFJBSU5UX0lOREVYXzEiEQQvICENSkNSRUFURSBJTkRFWCAiUFVCTElDIi4iRktfQ09NUEFOWV9JTkRFWF8xIiBPTiAiUFVCTElDIi4iQ0FSIigiQ09NUEFOWV9JRCIpEQQEECAlDakBQUxURVIgVEFCTEUgIlBVQkxJQyIuIkNBUiIgQUREIENPTlNUUkFJTlQgIlBVQkxJQyIuIkZLX0NPTVBBTlkiIEZPUkVJR04gS0VZKCJDT01QQU5ZX0lEIikgSU5ERVggIlBVQkxJQyIuIkZLX0NPTVBBTllfSU5ERVhfMSIgUkVGRVJFTkNFUyAiUFVCTElDIi4iQ09NUEFOWSIoIklEIikgTk9DSEVDSwAAAEUI5gcDADEyMwARAiFRU3VwZXIgY29tcGFueRECIlNBbm90aGVyIGNvbXBhbnkRAiNUT25lIG1vcmUgY29tcGFueQAAAEUIrQgDABECU0Fub3RoZXIgY29tcGFueTIRAlRPbmUgbW9yZSBjb21wYW55MxECUVN1cGVyIGNvbXBhbnkxAAAAAAAAA3cKWgAbAAhjaHVuay4yZQhjaHVuay4yZgVtYXAuMQZtYXAuMTcFbWFwLjMFbWFwLjQFbWFwLjUFbWFwLjYFbWFwLjcFbWFwLjgFbWFwLmEFbWFwLmIFbWFwLmMNbmFtZS5pbmRleC4xMw1uYW1lLmluZGV4LjE1DG5hbWUuaW5kZXguNwxuYW1lLmxvYkRhdGELbmFtZS5sb2JNYXALbmFtZS5sb2JSZWYVbmFtZS5vcGVuVHJhbnNhY3Rpb25zDG5hbWUudGFibGUuMAxuYW1lLnRhYmxlLjMMbmFtZS50YWJsZS45Dm5hbWUudW5kb0xvZy4xBnJvb3QuMwZyb290LjcGcm9vdC44mAFjaHVuazoyZSxibG9jazo0LGxlbjoxLGxpdmVNYXg6MCxsaXZlUGFnZXM6MCxtYXA6MTYsbWF4OmVjMCxuZXh0OjYscGFnZXM6NCxyb290OmI4MDAwMDI0NzU2LHRpbWU6MTMwLHVudXNlZDoxMzksdW51c2VkQXRWZXJzaW9uOjJmLHZlcnNpb246MmUscGluQ291bnQ6MJgBY2h1bms6MmYsYmxvY2s6NixsZW46MSxsaXZlTWF4OjAsbGl2ZVBhZ2VzOjAsbWFwOjE3LG1heDo2MDAsbmV4dDo3LHBhZ2VzOjEscm9vdDpiYzAwMDAwMmUxNix0aW1lOjEzOCx1bnVzZWQ6MTM5LHVudXNlZEF0VmVyc2lvbjoyZix2ZXJzaW9uOjJmLHBpbkNvdW50OjAVbmFtZTpvcGVuVHJhbnNhY3Rpb25zH25hbWU6dW5kb0xvZy4xLGNyZWF0ZVZlcnNpb246MmUMbmFtZTp0YWJsZS4wC25hbWU6bG9iTWFwC25hbWU6bG9iUmVmDG5hbWU6bG9iRGF0YRxuYW1lOnRhYmxlLjMsY3JlYXRlVmVyc2lvbjoxHG5hbWU6aW5kZXguNyxjcmVhdGVWZXJzaW9uOjEcbmFtZTp0YWJsZS45LGNyZWF0ZVZlcnNpb246Mh1uYW1lOmluZGV4LjEzLGNyZWF0ZVZlcnNpb246Mh1uYW1lOmluZGV4LjE1LGNyZWF0ZVZlcnNpb246MgFiAWMBOAE2ATQBNQExATMBNwFhAjE3C2MwMDAwMDAyZTE4C2MwMDAwMDIyNGM2C2MwMDAwMDIzNjA2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGNodW5rOjMwLGJsb2NrOjIsdmVyc2lvbjozMCxmbGV0Y2hlcjphNGY0OGNhNCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKY2h1bms6MzIsYmxvY2s6MyxsZW46MSxtYXA6MTcsbWF4OjQwMCxuZXh0OjQscGFnZXM6MSxyb290OmM4MDAwMDAyZTE0LHRpbWU6MTNiLHZlcnNpb246MzIscGluQ291bnQ6MCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCgAAA2cD7QAbAAhjaHVuay4zMAhjaHVuay4zMQVtYXAuMQZtYXAuMTcFbWFwLjMFbWFwLjQFbWFwLjUFbWFwLjYFbWFwLjcFbWFwLjgFbWFwLmEFbWFwLmIFbWFwLmMNbmFtZS5pbmRleC4xMw1uYW1lLmluZGV4LjE1DG5hbWUuaW5kZXguNwxuYW1lLmxvYkRhdGELbmFtZS5sb2JNYXALbmFtZS5sb2JSZWYVbmFtZS5vcGVuVHJhbnNhY3Rpb25zDG5hbWUudGFibGUuMAxuYW1lLnRhYmxlLjMMbmFtZS50YWJsZS45Dm5hbWUudW5kb0xvZy4xBnJvb3QuMwZyb290LjcGcm9vdC44jwFjaHVuazozMCxibG9jazoyLGxlbjoxLGxpdmVNYXg6OGMwLGxpdmVQYWdlczozLG1hcDoxNyxtYXg6Y2MwLG5leHQ6MyxwYWdlczo0LHJvb3Q6YzAwMDAwMjQ3NTQsdGltZToxMzksdW51c2VkQXRWZXJzaW9uOjMwLHZlcnNpb246MzAscGluQ291bnQ6MJEBY2h1bms6MzEsYmxvY2s6NSxsZW46MSxsaXZlTWF4OjAsbGl2ZVBhZ2VzOjAsbWFwOjE3LG1heDo2MDAscGFnZXM6MSxyb290OmM0MDAwMDAyZTE2LHRpbWU6MTNhLHVudXNlZDoxM2IsdW51c2VkQXRWZXJzaW9uOjMxLHZlcnNpb246MzEscGluQ291bnQ6MBVuYW1lOm9wZW5UcmFuc2FjdGlvbnMfbmFtZTp1bmRvTG9nLjEsY3JlYXRlVmVyc2lvbjoyZQxuYW1lOnRhYmxlLjALbmFtZTpsb2JNYXALbmFtZTpsb2JSZWYMbmFtZTpsb2JEYXRhHG5hbWU6dGFibGUuMyxjcmVhdGVWZXJzaW9uOjEcbmFtZTppbmRleC43LGNyZWF0ZVZlcnNpb246MRxuYW1lOnRhYmxlLjksY3JlYXRlVmVyc2lvbjoyHW5hbWU6aW5kZXguMTMsY3JlYXRlVmVyc2lvbjoyHW5hbWU6aW5kZXguMTUsY3JlYXRlVmVyc2lvbjoyAWIBYwE4ATYBNAE1ATEBMwE3AWECMTcLYzAwMDAwMDJlMTgLYzAwMDAwMjI0YzYLYzAwMDAwMjM2MDZlcnNpb246MRxuYW1lOnRhYmxlLjksY3JlYXRlVmVyc2lvbjoyHW5hbWU6aW5kZXguMTMsY3JlYXRlVmVyc2lvbjoyHW5hbWU6aW5kZXguMTUsY3JlYXRlVmVyc2lvbjoyAWIBYwE4ATYBNAE1ATEBMwE3AWECMTcLYzAwMDAwMDJlMTgLYzAwMDAwMjI0YzYLYzAwMDAwMjM2MDZuZGV4LjcsY3JlYXRlVmVyc2lvbjoxHG5hbWU6dGFibGUuOSxjcmVhdGVWZXJzaW9uOjIdbmFtZTppbmRleC4xMyxjcmVhdGVWZXJzaW9uOjIdbmFtZTppbmRleC4xNSxjcmVhdGVWZXJzaW9uOjIBYgFjATgBNgE0ATUBMQEzATcBYQIxNwtiODAwMDAwMmUxOAtiODAwMDAyMjRjNgtiODAwMDAyMzYwNgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjaHVuazozMixibG9jazozLHZlcnNpb246MzIsZmxldGNoZXI6YTcxMThlYTcgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCmNodW5rOjMzLGJsb2NrOjQsbGVuOjEsbWFwOjE3LG1heDplYzAsbmV4dDo2LHBhZ2VzOjQscm9vdDpjYzAwMDAyNDc1Nix0aW1lOjEzZCx2ZXJzaW9uOjMzLHBpbkNvdW50OjAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAoAAAfbB1ADEAAxMjM0NTY3BQgFCQUKBQsFDAUNBQ4FDwUQABEEISAmWFNFVCBDUkVBVEVfQlVJTEQgMjAwEQQiICINMkNSRUFURSBVU0VSIElGIE5PVCBFWElTVFMgIiIgU0FMVCAnJyBIQVNIICcnIEFETUlOEQQjICANkQJDUkVBVEUgQ0FDSEVEIFRBQkxFICJQVUJMSUMiLiJDT01QQU5ZIigKICAgICJJRCIgSU5UIERFRkFVTFQgTkVYVCBWQUxVRSBGT1IgIlBVQkxJQyIuIlNZU1RFTV9TRVFVRU5DRV85QzM4RkNEQV9GNUY0XzRBMDVfQjQ5NF80NkEzRDVFOTc5NDQiIE5PVCBOVUxMIE5VTExfVE9fREVGQVVMVCBTRVFVRU5DRSAiUFVCTElDIi4iU1lTVEVNX1NFUVVFTkNFXzlDMzhGQ0RBX0Y1RjRfNEEwNV9CNDk0XzQ2QTNENUU5Nzk0NCIsCiAgICAiTkFNRSIgVkFSQ0hBUigyNTUpIE5PVCBOVUxMCikRBCQgIw1tQ1JFQVRFIFNFUVVFTkNFICJQVUJMSUMiLiJTWVNURU1fU0VRVUVOQ0VfOUMzOEZDREFfRjVGNF80QTA1X0I0OTRfNDZBM0Q1RTk3OTQ0IiBTVEFSVCBXSVRIIDQgQkVMT05HU19UT19UQUJMRREEJSAhDUdDUkVBVEUgUFJJTUFSWSBLRVkgIlBVQkxJQyIuIlBSSU1BUllfS0VZXzYiIE9OICJQVUJMSUMiLiJDT01QQU5ZIigiSUQiKREEJiAlDXZBTFRFUiBUQUJMRSAiUFVCTElDIi4iQ09NUEFOWSIgQUREIENPTlNUUkFJTlQgIlBVQkxJQyIuIkNPTlNUUkFJTlRfNiIgUFJJTUFSWSBLRVkoIklEIikgSU5ERVggIlBVQkxJQyIuIlBSSU1BUllfS0VZXzYiEQQnICENT0NSRUFURSBVTklRVUUgSU5ERVggIlBVQkxJQyIuIkNPTlNUUkFJTlRfSU5ERVhfNiIgT04gIlBVQkxJQyIuIkNPTVBBTlkiKCJOQU1FIikRBCggJQ15QUxURVIgVEFCTEUgIlBVQkxJQyIuIkNPTVBBTlkiIEFERCBDT05TVFJBSU5UICJQVUJMSUMiLiJDT05TVFJBSU5UXzYzIiBVTklRVUUoIk5BTUUiKSBJTkRFWCAiUFVCTElDIi4iQ09OU1RSQUlOVF9JTkRFWF82IhEEKSAgDacCQ1JFQVRFIENBQ0hFRCBUQUJMRSAiUFVCTElDIi4iQ0FSIigKICAgICJJRCIgSU5UIERFRkFVTFQgTkVYVCBWQUxVRSBGT1IgIlBVQkxJQyIuIlNZU1RFTV9TRVFVRU5DRV9GNDUzQzQ2Ml8xMDdGXzQ5OEZfOTRDRV82NDg4MkU2RkI4ODAiIE5PVCBOVUxMIE5VTExfVE9fREVGQVVMVCBTRVFVRU5DRSAiUFVCTElDIi4iU1lTVEVNX1NFUVVFTkNFX0Y0NTNDNDYyXzEwN0ZfNDk4Rl85NENFXzY0ODgyRTZGQjg4MCIsCiAgICAiTkFNRSIgVkFSQ0hBUiBOT1QgTlVMTCwKICAgICJDT01QQU5ZX0lEIiBJTlQgTk9UIE5VTEwKKREEKiAjDW1DUkVBVEUgU0VRVUVOQ0UgIlBVQkxJQyIuIlNZU1RFTV9TRVFVRU5DRV9GNDUzQzQ2Ml8xMDdGXzQ5OEZfOTRDRV82NDg4MkU2RkI4ODAiIFNUQVJUIFdJVEggMSBCRUxPTkdTX1RPX1RBQkxFEQQrICENQ0NSRUFURSBQUklNQVJZIEtFWSAiUFVCTElDIi4iUFJJTUFSWV9LRVlfMSIgT04gIlBVQkxJQyIuIkNBUiIoIklEIikRBCwgJQ1yQUxURVIgVEFCTEUgIlBVQkxJQyIuIkNBUiIgQUREIENPTlNUUkFJTlQgIlBVQkxJQyIuIkNPTlNUUkFJTlRfMSIgUFJJTUFSWSBLRVkoIklEIikgSU5ERVggIlBVQkxJQyIuIlBSSU1BUllfS0VZXzEiEQQtICENS0NSRUFURSBVTklRVUUgSU5ERVggIlBVQkxJQyIuIkNPTlNUUkFJTlRfSU5ERVhfMSIgT04gIlBVQkxJQyIuIkNBUiIoIk5BTUUiKREELiAlDXVBTFRFUiBUQUJMRSAiUFVCTElDIi4iQ0FSIiBBREQgQ09OU1RSQUlOVCAiUFVCTElDIi4iQ09OU1RSQUlOVF8xMCIgVU5JUVVFKCJOQU1FIikgSU5ERVggIlBVQkxJQyIuIkNPTlNUUkFJTlRfSU5ERVhfMSIRBC8gIQ1KQ1JFQVRFIElOREVYICJQVUJMSUMiLiJGS19DT01QQU5ZX0lOREVYXzEiIE9OICJQVUJMSUMiLiJDQVIiKCJDT01QQU5ZX0lEIikRBAQQICUNqQFBTFRFUiBUQUJMRSAiUFVCTElDIi4iQ0FSIiBBREQgQ09OU1RSQUlOVCAiUFVCTElDIi4iRktfQ09NUEFOWSIgRk9SRUlHTiBLRVkoIkNPTVBBTllfSUQiKSBJTkRFWCAiUFVCTElDIi4iRktfQ09NUEFOWV9JTkRFWF8xIiBSRUZFUkVOQ0VTICJQVUJMSUMiLiJDT01QQU5ZIigiSUQiKSBOT0NIRUNLAAAARQjlBwMAMTIzABECIVFTdXBlciBjb21wYW55EQIiU0Fub3RoZXIgY29tcGFueRECI1RPbmUgbW9yZSBjb21wYW55AAAARQiuCAMAEQJTQW5vdGhlciBjb21wYW55MhECVE9uZSBtb3JlIGNvbXBhbnkzEQJRU3VwZXIgY29tcGFueTEAAAAAAAAEEw09ABwACGNodW5rLjMwCGNodW5rLjMxCGNodW5rLjMyBW1hcC4xBm1hcC4xNwVtYXAuMwVtYXAuNAVtYXAuNQVtYXAuNgVtYXAuNwVtYXAuOAVtYXAuYQVtYXAuYgVtYXAuYw1uYW1lLmluZGV4LjEzDW5hbWUuaW5kZXguMTUMbmFtZS5pbmRleC43DG5hbWUubG9iRGF0YQtuYW1lLmxvYk1hcAtuYW1lLmxvYlJlZhVuYW1lLm9wZW5UcmFuc2FjdGlvbnMMbmFtZS50YWJsZS4wDG5hbWUudGFibGUuMwxuYW1lLnRhYmxlLjkObmFtZS51bmRvTG9nLjEGcm9vdC4zBnJvb3QuNwZyb290LjiYAWNodW5rOjMwLGJsb2NrOjIsbGVuOjEsbGl2ZU1heDowLGxpdmVQYWdlczowLG1hcDoxNyxtYXg6Y2MwLG5leHQ6MyxwYWdlczo0LHJvb3Q6YzAwMDAwMjQ3NTQsdGltZToxMzksdW51c2VkOjEzZCx1bnVzZWRBdFZlcnNpb246MzIsdmVyc2lvbjozMCxwaW5Db3VudDowkQFjaHVuazozMSxibG9jazo1LGxlbjoxLGxpdmVNYXg6MCxsaXZlUGFnZXM6MCxtYXA6MTcsbWF4OjYwMCxwYWdlczoxLHJvb3Q6YzQwMDAwMDJlMTYsdGltZToxM2EsdW51c2VkOjEzYix1bnVzZWRBdFZlcnNpb246MzEsdmVyc2lvbjozMSxwaW5Db3VudDowmAFjaHVuazozMixibG9jazozLGxlbjoxLGxpdmVNYXg6MCxsaXZlUGFnZXM6MCxtYXA6MTcsbWF4OjQwMCxuZXh0OjQscGFnZXM6MSxyb290OmM4MDAwMDAyZTE0LHRpbWU6MTNiLHVudXNlZDoxM2QsdW51c2VkQXRWZXJzaW9uOjMyLHZlcnNpb246MzIscGluQ291bnQ6MBVuYW1lOm9wZW5UcmFuc2FjdGlvbnMfbmFtZTp1bmRvTG9nLjEsY3JlYXRlVmVyc2lvbjoyZQxuYW1lOnRhYmxlLjALbmFtZTpsb2JNYXALbmFtZTpsb2JSZWYMbmFtZTpsb2JEYXRhHG5hbWU6dGFibGUuMyxjcmVhdGVWZXJzaW9uOjEcbmFtZTppbmRleC43LGNyZWF0ZVZlcnNpb246MRxuYW1lOnRhYmxlLjksY3JlYXRlVmVyc2lvbjoyHW5hbWU6aW5kZXguMTMsY3JlYXRlVmVyc2lvbjoyHW5hbWU6aW5kZXguMTUsY3JlYXRlVmVyc2lvbjoyAWIBYwE4ATYBNAE1ATEBMwE3AWECMTcLY2MwMDAwMDJlMTgLY2MwMDAwMjI0YzYLY2MwMDAwMjM2MDYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY2h1bms6MzMsYmxvY2s6NCx2ZXJzaW9uOjMzLGZsZXRjaGVyOmE4MjM4ZmE5ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIApjaHVuazozMSxibG9jazo1LGxlbjoxLG1hcDoxNyxtYXg6NjAwLHBhZ2VzOjEscm9vdDpjNDAwMDAwMmUxNix0aW1lOjEzYSx2ZXJzaW9uOjMxLHBpbkNvdW50OjAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKAAAEAwSKABwACGNodW5rLjJlCGNodW5rLjJmCGNodW5rLjMwBW1hcC4xBm1hcC4xNwVtYXAuMwVtYXAuNAVtYXAuNQVtYXAuNgVtYXAuNwVtYXAuOAVtYXAuYQVtYXAuYgVtYXAuYw1uYW1lLmluZGV4LjEzDW5hbWUuaW5kZXguMTUMbmFtZS5pbmRleC43DG5hbWUubG9iRGF0YQtuYW1lLmxvYk1hcAtuYW1lLmxvYlJlZhVuYW1lLm9wZW5UcmFuc2FjdGlvbnMMbmFtZS50YWJsZS4wDG5hbWUudGFibGUuMwxuYW1lLnRhYmxlLjkObmFtZS51bmRvTG9nLjEGcm9vdC4zBnJvb3QuNwZyb290LjiRAWNodW5rOjJlLGJsb2NrOjMsbGVuOjEsbGl2ZU1heDowLGxpdmVQYWdlczowLG1hcDoxNixtYXg6ZWMwLHBhZ2VzOjQscm9vdDpiODAwMDAyNDc1Nix0aW1lOjEzMCx1bnVzZWQ6MTM5LHVudXNlZEF0VmVyc2lvbjoyZix2ZXJzaW9uOjJlLHBpbkNvdW50OjCRAWNodW5rOjJmLGJsb2NrOjcsbGVuOjEsbGl2ZU1heDowLGxpdmVQYWdlczowLG1hcDoxNyxtYXg6NjAwLHBhZ2VzOjEscm9vdDpiYzAwMDAwMmUxNix0aW1lOjEzOCx1bnVzZWQ6MTM5LHVudXNlZEF0VmVyc2lvbjoyZix2ZXJzaW9uOjJmLHBpbkNvdW50OjCPAWNodW5rOjMwLGJsb2NrOjIsbGVuOjEsbGl2ZU1heDo4YzAsbGl2ZVBhZ2VzOjMsbWFwOjE3LG1heDpjYzAsbmV4dDozLHBhZ2VzOjQscm9vdDpjMDAwMDAyNDc1NCx0aW1lOjEzOSx1bnVzZWRBdFZlcnNpb246MzAsdmVyc2lvbjozMCxwaW5Db3VudDowFW5hbWU6b3BlblRyYW5zYWN0aW9ucx9uYW1lOnVuZG9Mb2cuMSxjcmVhdGVWZXJzaW9uOjJlDG5hbWU6dGFibGUuMAtuYW1lOmxvYk1hcAtuYW1lOmxvYlJlZgxuYW1lOmxvYkRhdGEcbmFtZTp0YWJsZS4zLGNyZWF0ZVZlcnNpb246MRxuYW1lOmluZGV4LjcsY3JlYXRlVmVyc2lvbjoxHG5hbWU6dGFibGUuOSxjcmVhdGVWZXJzaW9uOjIdbmFtZTppbmRleC4xMyxjcmVhdGVWZXJzaW9uOjIdbmFtZTppbmRleC4xNSxjcmVhdGVWZXJzaW9uOjIBYgFjATgBNgE0ATUBMQEzATcBYQIxNwtjMDAwMDAwMmUxOAtjMDAwMDAyMjRjNgtjMDAwMDAyMzYwNm5kZXguNyxjcmVhdGVWZXJzaW9uOjEcbmFtZTp0YWJsZS45LGNyZWF0ZVZlcnNpb246Mh1uYW1lOmluZGV4LjEzLGNyZWF0ZVZlcnNpb246Mh1uYW1lOmluZGV4LjE1LGNyZWF0ZVZlcnNpb246MgFiAWMBOAE2ATQBNQExATMBNwFhAjE3C2I4MDAwMDAyZTE4C2I4MDAwMDIyNGM2C2I4MDAwMDIzNjA2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGNodW5rOjMxLGJsb2NrOjUsdmVyc2lvbjozMSxmbGV0Y2hlcjphNjE0OGRhOCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKY2h1bms6MzQsYmxvY2s6NixsZW46MSxtYXA6MTksbWF4OmY0MCxuZXh0OjcscGFnZXM6Nyxyb290OmQwMDAwMDI2NDU2LHRpbWU6MTg5LHZlcnNpb246MzQscGluQ291bnQ6MCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCgAAB9sHVwMQADEyMzQ1NjcFCAUJBQoFCwUMBQ0FDgUPBRAAEQQhICZYU0VUIENSRUFURV9CVUlMRCAyMDARBCIgIg0yQ1JFQVRFIFVTRVIgSUYgTk9UIEVYSVNUUyAiIiBTQUxUICcnIEhBU0ggJycgQURNSU4RBCMgIA2RAkNSRUFURSBDQUNIRUQgVEFCTEUgIlBVQkxJQyIuIkNPTVBBTlkiKAogICAgIklEIiBJTlQgREVGQVVMVCBORVhUIFZBTFVFIEZPUiAiUFVCTElDIi4iU1lTVEVNX1NFUVVFTkNFXzlDMzhGQ0RBX0Y1RjRfNEEwNV9CNDk0XzQ2QTNENUU5Nzk0NCIgTk9UIE5VTEwgTlVMTF9UT19ERUZBVUxUIFNFUVVFTkNFICJQVUJMSUMiLiJTWVNURU1fU0VRVUVOQ0VfOUMzOEZDREFfRjVGNF80QTA1X0I0OTRfNDZBM0Q1RTk3OTQ0IiwKICAgICJOQU1FIiBWQVJDSEFSKDI1NSkgTk9UIE5VTEwKKREEJCAjDW1DUkVBVEUgU0VRVUVOQ0UgIlBVQkxJQyIuIlNZU1RFTV9TRVFVRU5DRV85QzM4RkNEQV9GNUY0XzRBMDVfQjQ5NF80NkEzRDVFOTc5NDQiIFNUQVJUIFdJVEggMyBCRUxPTkdTX1RPX1RBQkxFEQQlICENR0NSRUFURSBQUklNQVJZIEtFWSAiUFVCTElDIi4iUFJJTUFSWV9LRVlfNiIgT04gIlBVQkxJQyIuIkNPTVBBTlkiKCJJRCIpEQQmICUNdkFMVEVSIFRBQkxFICJQVUJMSUMiLiJDT01QQU5ZIiBBREQgQ09OU1RSQUlOVCAiUFVCTElDIi4iQ09OU1RSQUlOVF82IiBQUklNQVJZIEtFWSgiSUQiKSBJTkRFWCAiUFVCTElDIi4iUFJJTUFSWV9LRVlfNiIRBCcgIQ1PQ1JFQVRFIFVOSVFVRSBJTkRFWCAiUFVCTElDIi4iQ09OU1RSQUlOVF9JTkRFWF82IiBPTiAiUFVCTElDIi4iQ09NUEFOWSIoIk5BTUUiKREEKCAlDXlBTFRFUiBUQUJMRSAiUFVCTElDIi4iQ09NUEFOWSIgQUREIENPTlNUUkFJTlQgIlBVQkxJQyIuIkNPTlNUUkFJTlRfNjMiIFVOSVFVRSgiTkFNRSIpIElOREVYICJQVUJMSUMiLiJDT05TVFJBSU5UX0lOREVYXzYiEQQpICANpwJDUkVBVEUgQ0FDSEVEIFRBQkxFICJQVUJMSUMiLiJDQVIiKAogICAgIklEIiBJTlQgREVGQVVMVCBORVhUIFZBTFVFIEZPUiAiUFVCTElDIi4iU1lTVEVNX1NFUVVFTkNFX0Y0NTNDNDYyXzEwN0ZfNDk4Rl85NENFXzY0ODgyRTZGQjg4MCIgTk9UIE5VTEwgTlVMTF9UT19ERUZBVUxUIFNFUVVFTkNFICJQVUJMSUMiLiJTWVNURU1fU0VRVUVOQ0VfRjQ1M0M0NjJfMTA3Rl80OThGXzk0Q0VfNjQ4ODJFNkZCODgwIiwKICAgICJOQU1FIiBWQVJDSEFSIE5PVCBOVUxMLAogICAgIkNPTVBBTllfSUQiIElOVCBOT1QgTlVMTAopEQQqICMNbUNSRUFURSBTRVFVRU5DRSAiUFVCTElDIi4iU1lTVEVNX1NFUVVFTkNFX0Y0NTNDNDYyXzEwN0ZfNDk4Rl85NENFXzY0ODgyRTZGQjg4MCIgU1RBUlQgV0lUSCA0IEJFTE9OR1NfVE9fVEFCTEURBCsgIQ1DQ1JFQVRFIFBSSU1BUlkgS0VZICJQVUJMSUMiLiJQUklNQVJZX0tFWV8xIiBPTiAiUFVCTElDIi4iQ0FSIigiSUQiKREELCAlDXJBTFRFUiBUQUJMRSAiUFVCTElDIi4iQ0FSIiBBREQgQ09OU1RSQUlOVCAiUFVCTElDIi4iQ09OU1RSQUlOVF8xIiBQUklNQVJZIEtFWSgiSUQiKSBJTkRFWCAiUFVCTElDIi4iUFJJTUFSWV9LRVlfMSIRBC0gIQ1LQ1JFQVRFIFVOSVFVRSBJTkRFWCAiUFVCTElDIi4iQ09OU1RSQUlOVF9JTkRFWF8xIiBPTiAiUFVCTElDIi4iQ0FSIigiTkFNRSIpEQQuICUNdUFMVEVSIFRBQkxFICJQVUJMSUMiLiJDQVIiIEFERCBDT05TVFJBSU5UICJQVUJMSUMiLiJDT05TVFJBSU5UXzEwIiBVTklRVUUoIk5BTUUiKSBJTkRFWCAiUFVCTElDIi4iQ09OU1RSQUlOVF9JTkRFWF8xIhEELyAhDUpDUkVBVEUgSU5ERVggIlBVQkxJQyIuIkZLX0NPTVBBTllfSU5ERVhfMSIgT04gIlBVQkxJQyIuIkNBUiIoIkNPTVBBTllfSUQiKREEBBAgJQ2pAUFMVEVSIFRBQkxFICJQVUJMSUMiLiJDQVIiIEFERCBDT05TVFJBSU5UICJQVUJMSUMiLiJGS19DT01QQU5ZIiBGT1JFSUdOIEtFWSgiQ09NUEFOWV9JRCIpIElOREVYICJQVUJMSUMiLiJGS19DT01QQU5ZX0lOREVYXzEiIFJFRkVSRU5DRVMgIlBVQkxJQyIuIkNPTVBBTlkiKCJJRCIpIE5PQ0hFQ0sAAAAmCIEHAgAxMgARAiFNQ2FyIFRvIEdvEQIiTURyaXZlIE5vdwAAACYIqwgCABECTUNhciBUbyBHbzERAk1Ecml2ZSBOb3cyAAAAAAAATgilCgMAMTIzABEDIVFIeXVuZGFpIFZlbnVlIREDIldNYXJ1dGkgU3V6dWtpIER6aXJlIREDI1ZMYW1ib3JnaGluaSBVcnJhY28iAAAASwlSCwMAEQJRSHl1bmRhaSBWZW51ZTERAlZMYW1ib3JnaGluaSBVcnJhY28zEQJXTWFydXRpIFN1enVraSBEemlyZTIAAAAAAAAAGQlVDAMAEQIhMRECITIRAiIzAAAAAAAABSgMjQAiAAhjaHVuay4zMAhjaHVuay4zMQhjaHVuay4zMghjaHVuay4zMwVtYXAuMQZtYXAuMTgGbWFwLjE5BW1hcC4zBW1hcC40BW1hcC41BW1hcC42BW1hcC43BW1hcC44BW1hcC5hBW1hcC5iBW1hcC5jDW5hbWUuaW5kZXguMTMNbmFtZS5pbmRleC4xNQxuYW1lLmluZGV4LjcMbmFtZS5sb2JEYXRhC25hbWUubG9iTWFwC25hbWUubG9iUmVmFW5hbWUub3BlblRyYW5zYWN0aW9ucwxuYW1lLnRhYmxlLjAMbmFtZS50YWJsZS4zDG5hbWUudGFibGUuOQ5uYW1lLnVuZG9Mb2cuMQ5uYW1lLnVuZG9Mb2cuMgZyb290LjMGcm9vdC43BnJvb3QuOAZyb290LmEGcm9vdC5iBnJvb3QuY5gBY2h1bms6MzAsYmxvY2s6MixsZW46MSxsaXZlTWF4OjAsbGl2ZVBhZ2VzOjAsbWFwOjE3LG1heDpjYzAsbmV4dDozLHBhZ2VzOjQscm9vdDpjMDAwMDAyNDc1NCx0aW1lOjEzOSx1bnVzZWQ6MTNkLHVudXNlZEF0VmVyc2lvbjozMix2ZXJzaW9uOjMwLHBpbkNvdW50OjCRAWNodW5rOjMxLGJsb2NrOjUsbGVuOjEsbGl2ZU1heDowLGxpdmVQYWdlczowLG1hcDoxNyxtYXg6NjAwLHBhZ2VzOjEscm9vdDpjNDAwMDAwMmUxNix0aW1lOjEzYSx1bnVzZWQ6MTNiLHVudXNlZEF0VmVyc2lvbjozMSx2ZXJzaW9uOjMxLHBpbkNvdW50OjCYAWNodW5rOjMyLGJsb2NrOjMsbGVuOjEsbGl2ZU1heDowLGxpdmVQYWdlczowLG1hcDoxNyxtYXg6NDAwLG5leHQ6NCxwYWdlczoxLHJvb3Q6YzgwMDAwMDJlMTQsdGltZToxM2IsdW51c2VkOjEzZCx1bnVzZWRBdFZlcnNpb246MzIsdmVyc2lvbjozMixwaW5Db3VudDowmAFjaHVuazozMyxibG9jazo0LGxlbjoxLGxpdmVNYXg6MCxsaXZlUGFnZXM6MCxtYXA6MTcsbWF4OmVjMCxuZXh0OjYscGFnZXM6NCxyb290OmNjMDAwMDI0NzU2LHRpbWU6MTNkLHVudXNlZDoxODksdW51c2VkQXRWZXJzaW9uOjMzLHZlcnNpb246MzMscGluQ291bnQ6MBVuYW1lOm9wZW5UcmFuc2FjdGlvbnMfbmFtZTp1bmRvTG9nLjEsY3JlYXRlVmVyc2lvbjozMx9uYW1lOnVuZG9Mb2cuMixjcmVhdGVWZXJzaW9uOjMzDG5hbWU6dGFibGUuMAtuYW1lOmxvYk1hcAtuYW1lOmxvYlJlZgxuYW1lOmxvYkRhdGEcbmFtZTp0YWJsZS4zLGNyZWF0ZVZlcnNpb246MRxuYW1lOmluZGV4LjcsY3JlYXRlVmVyc2lvbjoxHG5hbWU6dGFibGUuOSxjcmVhdGVWZXJzaW9uOjIdbmFtZTppbmRleC4xMyxjcmVhdGVWZXJzaW9uOjIdbmFtZTppbmRleC4xNSxjcmVhdGVWZXJzaW9uOjIBYgFjATgBNgE0ATUBMQEzATcBYQIxOAIxOQtkMDAwMDAwMmUxOAtkMDAwMDAyMjRjMgtkMDAwMDAyMmU0MgtkMDAwMDAyMzdjNgtkMDAwMDAyNGI0NgtkMDAwMDAyNWUwMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjaHVuazozNCxibG9jazo2LHZlcnNpb246MzQsZmxldGNoZXI6YTkzYzkwYWMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCg==
+  learner_created: true
+- name: src/carsharing/menu/CustomerMenu.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/command/RentCar.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/command/ReturnCar.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/command/ShowRentedCar.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/menu/RentCarMenu.java
+  visible: true
+  learner_created: true
+- name: src/carsharing/db/carsharing.trace.db
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/11504#comment
 status: Unchecked
 record: -1

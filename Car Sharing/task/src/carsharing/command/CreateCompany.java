@@ -24,7 +24,7 @@ public class CreateCompany extends CliCommand {
         System.out.println("Enter the company name:");
         Scanner scanner = new Scanner(System.in);
         String companyName = scanner.nextLine();
-        Main.DBManager.dbCompanyDAO.add(new Company(companyName));
+        Main.DBManager.getDbCompanyDAO().add(new Company(companyName));
         System.out.println("The company was created!");
     }
 }

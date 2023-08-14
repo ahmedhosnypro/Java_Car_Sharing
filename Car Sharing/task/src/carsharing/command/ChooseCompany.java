@@ -2,6 +2,8 @@ package carsharing.command;
 
 import carsharing.Main;
 import carsharing.menu.ChooseCompanyMenu;
+import carsharing.menu.CompanyMenu;
+import carsharing.menu.ManagerMenu;
 import carsharing.model.Company;
 
 import java.util.List;
@@ -22,12 +24,10 @@ public class ChooseCompany extends CliCommand {
 
     @Override
     public void run() {
-        List<Company> companies = Main.DBManager.dbCompanyDAO.findAll();
-        if (companies.isEmpty()) {
-            System.out.println("The company list is empty!");
-            return;
+        ChooseCompanyMenu menu = new ChooseCompanyMenu(ManagerMenu.getInstance());
+        Company company = menu.run();
+        if (company != null) {
+            new CompanyMenu(company).run();
         }
-        ChooseCompanyMenu menu = new ChooseCompanyMenu(companies);
-        menu.run();
     }
 }

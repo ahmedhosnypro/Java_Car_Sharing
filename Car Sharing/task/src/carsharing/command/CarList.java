@@ -15,7 +15,7 @@ public class CarList extends CliCommand {
 
     @Override
     public void run() {
-        List<Car> cars = Main.DBManager.dbCarDAO.findAllByCompanyId(companyId);
+        List<Car> cars = Main.DBManager.getDbCarDAO().findAllByCompanyId(companyId);
         if (cars.isEmpty()) {
             System.out.println("The car list is empty!");
             return;

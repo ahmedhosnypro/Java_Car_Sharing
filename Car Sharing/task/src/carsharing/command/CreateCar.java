@@ -18,7 +18,7 @@ public class CreateCar extends CliCommand {
         System.out.println("\nEnter the car name:");
         Scanner scanner = new Scanner(System.in);
         String carName = scanner.nextLine();
-        Main.DBManager.dbCarDAO.add(new Car(carName, companyId));
+        Main.DBManager.getDbCarDAO().add(new Car(carName, companyId));
         System.out.println("The car was created!");
     }
 }

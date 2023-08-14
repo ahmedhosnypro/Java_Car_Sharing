@@ -6,7 +6,7 @@ import carsharing.command.CliCommand;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class Menu {
+public abstract class Menu <T>{
     String header;
     List<CliCommand> commands = new ArrayList<>();
     boolean hasBack;
@@ -18,7 +18,7 @@ public abstract class Menu {
         this.backMenu = backMenu;
     }
 
-    public void run() {
+    public T run() {
         while (true) {
             System.out.println("\n"+ header);
             for (int i = 0; i < commands.size(); i++) {
@@ -41,5 +41,6 @@ public abstract class Menu {
                 System.out.println("Wrong input");
             }
         }
+        return null;
     }
 }

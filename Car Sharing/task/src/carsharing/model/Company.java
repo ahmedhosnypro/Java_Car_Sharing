@@ -1,5 +1,9 @@
 package carsharing.model;
 
+import carsharing.Main;
+
+import java.util.List;
+
 public class Company {
     private int id;
     private String name;
@@ -7,10 +11,6 @@ public class Company {
     public Company(int id, String name) {
         this.id = id;
         this.name = name;
-    }
-
-    public Company(int id) {
-        this.id = id;
     }
 
     public Company(String name) {
@@ -36,5 +36,10 @@ public class Company {
     @Override
     public String toString() {
         return id + ". " + name;
+    }
+
+    public List<Car> getAvailableCars() {
+        return Main.DBManager.getDbCarDAO().findAllByCompanyId(id)
+                .stream().filter(car -> !car.isRented()).toList();
     }
 }

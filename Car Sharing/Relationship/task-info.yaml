@@ -821,12 +821,6 @@ files:
 - name: src/carsharing/menu/CompanyMenu.java
   visible: true
   learner_created: true
-- name: src/carsharing/menu/ChooseCarMenu.java
-  visible: true
-  learner_created: true
-- name: src/carsharing/menu/CarMenu.java
-  visible: true
-  learner_created: true
 - name: src/carsharing/command/CarList.java
   visible: true
   learner_created: true
@@ -843,5 +837,5 @@ feedback_link: https://hyperskill.org/learn/step/11503#comment
 status: Solved
 feedback:
   message: Congratulations!
-  time: "Mon, 14 Aug 2023 20:00:18 UTC"
-record: -1
+  time: "Mon, 14 Aug 2023 20:05:43 UTC"
+record: 3
