@@ -1,11 +1,18 @@
 package carsharing;
 
-import carsharing.domain.Database;
+import carsharing.command.CLI;
+import carsharing.domain.CompanyDAO;
+import carsharing.domain.DBCompanyDAO;
+
+import java.util.Scanner;
 
 public class Main {
 
+    public static final Scanner scanner = new Scanner(System.in);
+
     public static void main(String[] args) {
-        new Database(dataBaseName(args), "", "").setup();
+        CompanyDAO dbCompanyDAO = new DBCompanyDAO(dataBaseName(args), "", "");
+        new CLI(dbCompanyDAO).run();
     }
 
     private static String dataBaseName(String... args) {
